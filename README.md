@@ -1,5 +1,7 @@
 # AI Bidding Document Generator
 
+[English](README.md) | [中文](README_CN.md)
+
 This project automatically generates professional bid documents from tender files using the DeepSeek API. It supports both PDF and text input files and outputs a complete Word document.
 
 ## Features

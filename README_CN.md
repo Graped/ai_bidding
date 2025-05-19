@@ -1,5 +1,7 @@
 # AI 标书生成系统
 
+[English](README.md) | [中文](README_CN.md)
+
 本项目基于 DeepSeek API 自动生成专业标书文档。支持 PDF 和文本格式的招标文件输入，并生成完整的 Word 格式标书。
 
 ## 功能特点
