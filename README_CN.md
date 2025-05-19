@@ -22,7 +22,7 @@
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/yourusername/ai_bidding.git
+git clone https://github.com/Graped/ai_bidding.git
 cd ai_bidding
 ```
 

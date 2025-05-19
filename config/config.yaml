@@ -1,6 +1,6 @@
 api:
-  base_url: "https://api.deepseek.com"
-  api_key: "sk-6cb9883b7d934ab1a34155ecc9dc5416"
+  base_url: ${DEEPSEEK_API_BASE}
+  api_key: ${DEEPSEEK_API_KEY}
   model: "deepseek-chat"
 
 paths:
