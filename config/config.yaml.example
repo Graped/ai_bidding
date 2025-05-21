@@ -1,0 +1,13 @@
+api:
+  base_url: "https://api.deepseek.com/v1"  # DeepSeek API 基础 URL
+  api_key: "your-api-key-here"  # 请替换为您的实际 API 密钥
+  model: "deepseek-chat"  # 使用的模型名称
+
+paths:
+  input_dir: "data/input"  # 输入文件目录
+  output_dir: "data/output"  # 输出文件目录
+
+generation:
+  temperature: 0.7  # 生成温度，控制随机性
+  max_tokens: 4000  # 最大生成 token 数
+  top_p: 0.95  # 核采样参数 
