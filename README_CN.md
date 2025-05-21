@@ -79,6 +79,8 @@ paths:
   output_dir: "data/output"
 ```
 
+> **重要提示**：`config.yaml` 文件包含敏感信息，已被 git 忽略。您需要在 `config` 目录下创建自己的 `config.yaml` 文件，并替换其中的 API 密钥为您的实际密钥。
+
 ## 项目结构
 
 ```

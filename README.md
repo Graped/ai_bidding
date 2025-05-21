@@ -79,6 +79,8 @@ paths:
   output_dir: "data/output"
 ```
 
+> **Important**: The `config.yaml` file contains sensitive information and is ignored by git. You need to create your own `config.yaml` file in the `config` directory and replace the API key with your actual key.
+
 ## Project Structure
 
 ```
