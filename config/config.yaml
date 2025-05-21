@@ -1,7 +1,10 @@
 api:
-  base_url: ${DEEPSEEK_API_BASE}
-  api_key: ${DEEPSEEK_API_KEY}
+  api_key: sk-6cb9883b7d934ab1a34155ecc9dc5416
+  base_url: "https://api.deepseek.com/v1"
   model: "deepseek-chat"
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 0.9
 
 paths:
   input_dir: "data/input"

@@ -1,14 +1,16 @@
 import os
 import yaml
-import openai
+from openai import OpenAI
 from pathlib import Path
 from dotenv import load_dotenv
 
 class DeepSeekClient:
     def __init__(self, config_path="config/config.yaml"):
         self.config = self._load_config(config_path)
-        openai.api_key = self.config["api"]["api_key"]
-        openai.api_base = self.config["api"]["base_url"]
+        self.client = OpenAI(
+            api_key=self.config["api"]["api_key"],
+            base_url=self.config["api"]["base_url"]
+        )
         
     def _load_config(self, config_path):
         config_file = Path(__file__).parent.parent / config_path
@@ -39,7 +41,7 @@ class DeepSeekClient:
         
         try:
             # 分析招标文件要求
-            analysis_response = openai.ChatCompletion.create(
+            analysis_response = self.client.chat.completions.create(
                 model=self.config["api"]["model"],
                 messages=[
                     {"role": "system", "content": "你是一个专业的标书分析专家，擅长提取招标文件中的关键要求。"},
@@ -50,7 +52,7 @@ class DeepSeekClient:
                 top_p=0.9
             )
             
-            requirements = analysis_response["choices"][0]["message"]["content"]
+            requirements = analysis_response.choices[0].message.content
             
             # 生成章节内容
             generation_prompt = f"""基于以下招标文件要求和分析，生成标书的{section_name}章节：
@@ -69,7 +71,7 @@ class DeepSeekClient:
 请生成完整的章节内容。
 """
             
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.config["api"]["model"],
                 messages=[
                     {"role": "system", "content": "你是一个专业的标书撰写专家，擅长根据招标文件生成高质量的标书内容。"},
@@ -80,7 +82,7 @@ class DeepSeekClient:
                 top_p=self.config["generation"]["top_p"]
             )
             
-            content = response["choices"][0]["message"]["content"]
+            content = response.choices[0].message.content
             
             # 内容质量检查
             check_prompt = f"""请检查以下生成的标书章节内容是否符合要求：
@@ -98,7 +100,7 @@ class DeepSeekClient:
 如果发现问题，请指出具体问题并提供改进建议。
 """
             
-            check_response = openai.ChatCompletion.create(
+            check_response = self.client.chat.completions.create(
                 model=self.config["api"]["model"],
                 messages=[
                     {"role": "system", "content": "你是一个专业的标书质量检查专家。"},
@@ -109,7 +111,7 @@ class DeepSeekClient:
                 top_p=0.9
             )
             
-            quality_check = check_response["choices"][0]["message"]["content"]
+            quality_check = check_response.choices[0].message.content
             
             # 如果发现问题，进行优化
             if "问题" in quality_check or "建议" in quality_check:
@@ -124,7 +126,7 @@ class DeepSeekClient:
 请根据检查结果优化内容，确保符合所有要求。
 """
                 
-                optimization_response = openai.ChatCompletion.create(
+                optimization_response = self.client.chat.completions.create(
                     model=self.config["api"]["model"],
                     messages=[
                         {"role": "system", "content": "你是一个专业的标书优化专家。"},
@@ -135,7 +137,7 @@ class DeepSeekClient:
                     top_p=0.9
                 )
                 
-                content = optimization_response["choices"][0]["message"]["content"]
+                content = optimization_response.choices[0].message.content
             
             return content
             
@@ -145,8 +147,8 @@ class DeepSeekClient:
 
     def generate_content(self, prompt, max_tokens=2000):
         try:
-            response = openai.ChatCompletion.create(
-                model="deepseek-chat",
+            response = self.client.chat.completions.create(
+                model=self.config["api"]["model"],
                 messages=[
                     {"role": "system", "content": "你是一个专业的标书撰写专家，擅长根据招标文件生成高质量的投标文件。"},
                     {"role": "user", "content": prompt}
@@ -154,7 +156,7 @@ class DeepSeekClient:
                 max_tokens=max_tokens,
                 temperature=0.7
             )
-            return response["choices"][0]["message"]["content"]
+            return response.choices[0].message.content
         except Exception as e:
             print(f"Error generating content: {str(e)}")
             return None 

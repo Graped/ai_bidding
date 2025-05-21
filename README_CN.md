@@ -13,12 +13,16 @@
 - 专业的文档结构，包含页眉页脚和样式
 - 支持表格、图片和流程图
 - 内容质量检查和优化
+- Markdown 到 Word 的格式保持转换
+- 支持加粗文本、表格和列表
+- 页眉页脚中动态显示项目名称
 
 ## 系统要求
 
 - Python 3.8 或更高版本
 - Node.js 16.0 或更高版本（用于 Mermaid 流程图支持）
 - Mermaid CLI（用于流程图生成）
+- UV（Python 包安装器和解析器）
 
 ## 安装步骤
 
@@ -28,23 +32,30 @@ git clone https://github.com/Graped/ai_bidding.git
 cd ai_bidding
 ```
 
-2. 创建并激活虚拟环境：
+2. 安装 UV（如果尚未安装）：
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. 使用 UV 创建并激活虚拟环境：
+```bash
+# 创建虚拟环境
+uv venv
+
+# 激活虚拟环境
 # Windows 系统
-python -m venv venv
-.\venv\Scripts\activate
+.venv/Scripts/activate
 
 # macOS/Linux 系统
-python -m venv venv
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
-3. 安装 Python 依赖：
+4. 使用 UV 安装 Python 依赖：
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
-4. 安装 Mermaid CLI（用于流程图生成）：
+5. 安装 Mermaid CLI（用于流程图生成）：
 ```bash
 # 使用 npm
 npm install -g @mermaid-js/mermaid-cli
@@ -53,17 +64,11 @@ npm install -g @mermaid-js/mermaid-cli
 yarn global add @mermaid-js/mermaid-cli
 ```
 
-5. 在项目根目录创建 `.env` 文件，配置 API 信息：
-```
-DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-DEEPSEEK_API_BASE=https://api.deepseek.com/v1
-```
-
 6. 创建 `config/config.yaml` 配置文件：
 ```yaml
 api:
-  api_key: ${DEEPSEEK_API_KEY}
-  base_url: ${DEEPSEEK_API_BASE}
+  api_key: "your-api-key-here"  # 替换为您的实际 API 密钥
+  base_url: "https://api.deepseek.com/v1"
   model: "deepseek-chat"
   temperature: 0.7
   max_tokens: 2000
@@ -73,6 +78,100 @@ paths:
   input_dir: "data/input"
   output_dir: "data/output"
 ```
+
+## 项目结构
+
+```
+ai_bidding/
+├── config/
+│   └── config.yaml          # 配置文件
+├── data/
+│   ├── input/              # 输入招标文件
+│   └── output/             # 生成的标书文档
+├── src/
+│   ├── main.py            # 主程序入口
+│   ├── deepseek_client.py # DeepSeek API 客户端
+│   └── md_to_word.py      # Markdown 转 Word 转换器
+├── requirements.txt        # Python 依赖
+└── README.md              # 文档
+```
+
+## 实现原理
+
+### 1. 文档处理流程
+1. **输入处理**
+   - 从输入目录读取招标文件（PDF/TXT）
+   - 使用 PyPDF2 提取 PDF 文件内容
+   - 支持 UTF-8 编码的文本文件
+
+2. **内容分析**
+   - 使用 DeepSeek API 分析招标要求
+   - 提取关键要求和评分标准
+   - 识别隐含期望和关注点
+
+3. **内容生成**
+   - 基于分析结果生成标书章节
+   - 确保符合招标要求
+   - 保持专业语言和格式
+
+4. **质量控制**
+   - 执行内容质量检查
+   - 验证要求覆盖情况
+   - 基于反馈优化内容
+
+### 2. 核心组件
+1. **DeepSeekClient (`deepseek_client.py`)**
+   - 处理与 DeepSeek 的 API 通信
+   - 管理内容生成和优化
+   - 实现 API 调用重试机制
+
+2. **文档转换器 (`md_to_word.py`)**
+   - 将 Markdown 转换为 Word 格式
+   - 保持专业排版
+   - 支持表格、图片和流程图
+   - 处理页眉、页脚和页码
+
+3. **主程序 (`main.py`)**
+   - 协调文档生成流程
+   - 管理文件操作和目录结构
+   - 处理章节的并发处理
+
+### 3. 关键功能实现
+1. **表格支持**
+   - 自动将 Markdown 表格转换为 Word 格式
+   - 保持表格结构和格式
+   - 支持合并单元格和自定义样式
+
+2. **图片和流程图处理**
+   - 将 Mermaid 图表转换为图片
+   - 在 Word 文档中嵌入图片
+   - 保持图片质量和位置
+
+3. **格式保持**
+   - 保持一致的字体样式（宋体/黑体）
+   - 保持标题级别和层次结构
+   - 正确处理列表和缩进
+
+4. **动态页眉页脚**
+   - 从目录结构提取项目名称
+   - 更新页眉中的项目信息
+   - 保持一致的页码编号
+
+### 4. 错误处理
+1. **API 通信**
+   - 实现 API 调用失败重试机制
+   - 处理速率限制和超时
+   - 提供有意义的错误信息
+
+2. **文件操作**
+   - 验证输入文件格式
+   - 处理文件编码问题
+   - 管理临时文件和清理
+
+3. **内容生成**
+   - 验证生成的内容
+   - 处理部分生成失败
+   - 提供备选方案
 
 ## 使用方法
 
@@ -106,6 +205,32 @@ python src/main.py
 - 必要附件
 - 格式附件
 
+### 文档格式
+
+生成的 Word 文档包含以下格式特性：
+
+1. 专业排版
+   - 统一的字体样式（正文使用宋体，标题使用黑体）
+   - 合理的行距和段落间距
+   - 标题居中对齐
+   - 列表正确缩进
+
+2. 表格支持
+   - 自动将 Markdown 表格转换为 Word 表格
+   - 表格单元格居中对齐
+   - 表头使用黑体加粗
+   - 使用网格样式提高可读性
+
+3. 文本格式
+   - 支持使用 `**文本**` 在 Markdown 中标记加粗文本
+   - 正确处理项目符号和编号列表
+   - 不同级别标题使用统一的字号
+
+4. 页眉页脚
+   - 页眉动态显示项目名称
+   - 页脚显示页码
+   - 专业的布局和间距
+
 ## 软件版本
 
 项目已测试的版本信息：
@@ -128,9 +253,9 @@ python src/main.py
 
 ### 敏感信息处理
 1. API 密钥
-   - 使用环境变量存储 API 密钥
-   - 不要将 `.env` 文件提交到版本控制系统
-   - 在示例中使用占位符（如 `sk-xxxxxxxx`）
+   - 在 config.yaml 中存储 API 密钥
+   - 不要将 config.yaml 文件提交到版本控制系统
+   - 在示例中使用占位符
 
 2. 招标文件
    - 示例文件中的敏感信息已脱敏
@@ -145,7 +270,7 @@ python src/main.py
 ### 安全建议
 1. 使用 `.gitignore` 排除敏感文件：
 ```
-.env
+config/config.yaml
 data/input/*
 data/output/*
 *.log

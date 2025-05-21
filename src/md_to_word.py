@@ -9,6 +9,8 @@ import re
 import subprocess
 import tempfile
 import os
+import docx.oxml.shared
+from docx.oxml import OxmlElement
 
 def convert_mermaid_to_image(mermaid_code):
     """将 Mermaid 代码转换为图片"""
@@ -78,7 +80,7 @@ def process_mermaid(doc, mermaid_code):
     if png_file and os.path.exists(png_file):
         try:
             # 添加图片到文档
-            doc.add_picture(png_file, width=Inches(6))  # 设置统一宽度为6英寸
+            doc.add_picture(png_file, width=Inches(6))  # 先插入图片
             
             # 设置图片居中
             last_paragraph = doc.paragraphs[-1]
@@ -119,7 +121,7 @@ def set_document_styles(doc):
     style.font.name = '宋体'
     style.font.size = Pt(12)
 
-def set_document_format(doc):
+def set_document_format(doc, project_name):
     """设置文档格式"""
     # 设置页面边距
     sections = doc.sections
@@ -132,13 +134,37 @@ def set_document_format(doc):
         # 添加页眉
         header = section.header
         header_para = header.paragraphs[0]
-        header_para.text = "智慧工程项目管理平台智能化软件、硬件系统投标文件"
+        header_para.text = f"{project_name}投标文件"
         header_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         # 添加页脚
         footer = section.footer
         footer_para = footer.paragraphs[0]
-        footer_para.text = "第 {PAGE} 页，共 {NUMPAGES} 页"
+        footer_para.text = "第 "
+        # 当前页码
+        run = footer_para.add_run()
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
+        run._r.append(fldChar1)
+        instrText = OxmlElement('w:instrText')
+        instrText.text = 'PAGE'
+        run._r.append(instrText)
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'end')
+        run._r.append(fldChar2)
+        footer_para.add_run(" 页，共 ")
+        # 总页数
+        run = footer_para.add_run()
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
+        run._r.append(fldChar1)
+        instrText = OxmlElement('w:instrText')
+        instrText.text = 'NUMPAGES'
+        run._r.append(instrText)
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'end')
+        run._r.append(fldChar2)
+        footer_para.add_run(" 页")
         footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 def process_table(md_table, doc):
@@ -179,42 +205,27 @@ def process_table(md_table, doc):
                     for run in paragraph.runs:
                         run.font.name = '宋体'
 
-def convert_md_to_word():
-    # 创建 Mermaid 配置文件
-    create_mermaid_config()
-    
-    # 读取 Markdown 文件
-    md_file = Path("data/output/智慧工程项目管理平台智能化软件、硬件系统招标文件/完整投标文件.md")
+def convert_md_to_word(md_file):
+    """将Markdown文件转换为Word文档"""
+    # 读取Markdown文件
     with open(md_file, 'r', encoding='utf-8') as f:
         md_content = f.read()
     
-    # 创建 Word 文档
+    # 创建Word文档
     doc = Document()
     
-    # 设置文档样式和格式
-    set_document_styles(doc)
-    set_document_format(doc)
+    # 设置文档格式
+    project_name = Path(md_file).parent.name
+    set_document_format(doc, project_name)
     
-    # 处理内容
+    # 处理Markdown内容
     lines = md_content.split('\n')
     i = 0
     while i < len(lines):
-        line = lines[i]
-        
-        # 处理 Mermaid 流程图
-        if line.strip().startswith('```mermaid'):
-            mermaid_lines = []
-            i += 1
-            while i < len(lines) and not lines[i].strip().startswith('```'):
-                mermaid_lines.append(lines[i])
-                i += 1
-            if mermaid_lines:
-                process_mermaid(doc, '\n'.join(mermaid_lines))
-            i += 1
-            continue
+        line = lines[i].strip()
         
         # 处理表格
-        if line.strip().startswith('|'):
+        if line.startswith('|'):
             table_lines = []
             while i < len(lines) and lines[i].strip().startswith('|'):
                 table_lines.append(lines[i])
@@ -223,68 +234,52 @@ def convert_md_to_word():
             continue
         
         # 处理标题
-        if line.startswith('# '):
-            heading = doc.add_heading(line[2:], level=1)
-            heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in heading.runs:
-                run.font.name = '黑体'
-        elif line.startswith('## '):
-            heading = doc.add_heading(line[3:], level=2)
-            for run in heading.runs:
-                run.font.name = '黑体'
-        elif line.startswith('### '):
-            heading = doc.add_heading(line[4:], level=3)
-            for run in heading.runs:
-                run.font.name = '黑体'
-        elif line.startswith('#### '):
-            heading = doc.add_heading(line[5:], level=4)
-            for run in heading.runs:
-                run.font.name = '黑体'
+        if line.startswith('#'):
+            level = len(re.match(r'^#+', line).group())
+            # 移除标题中的加粗标记
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', line.lstrip('#').strip())
+            if level == 1:
+                # 一级标题作为文档标题
+                doc.add_heading(text, level=0)
+            else:
+                # 其他级别的标题
+                doc.add_heading(text, level=level-1)
         
         # 处理列表
-        elif line.startswith('- '):
+        elif line.startswith(('- ', '* ', '+ ')):
+            # 移除列表标记
+            text = line[2:].strip()
+            # 移除加粗标记
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
             p = doc.add_paragraph(style='List Bullet')
-            run = p.add_run(line[2:])
-            run.font.name = '宋体'
-        elif line.startswith('1. '):
-            p = doc.add_paragraph(style='List Number')
-            run = p.add_run(line[3:])
-            run.font.name = '宋体'
+            p.add_run(text)
         
-        # 处理分隔线
-        elif line.strip() == '---':
-            p = doc.add_paragraph()
-            p.add_run('_' * 50)
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # 处理数字列表
+        elif re.match(r'^\d+\.', line):
+            # 移除数字和点
+            text = re.sub(r'^\d+\.', '', line).strip()
+            # 移除加粗标记
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+            p = doc.add_paragraph(style='List Number')
+            p.add_run(text)
         
         # 处理普通段落
-        elif line.strip():
+        elif line:
+            # 移除加粗标记
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', line)
             p = doc.add_paragraph()
-            # 设置段落格式
-            p.paragraph_format.line_spacing = 1.5
-            p.paragraph_format.space_after = Pt(10)
-            
-            # 处理加粗文本
-            parts = re.split(r'(\*\*.*?\*\*)', line)
-            for part in parts:
-                if part.startswith('**') and part.endswith('**'):
-                    run = p.add_run(part[2:-2])
-                    run.bold = True
-                    run.font.name = '宋体'
-                else:
-                    run = p.add_run(part)
-                    run.font.name = '宋体'
+            p.add_run(text)
         
         i += 1
     
-    # 保存 Word 文档
-    output_file = md_file.parent / "完整投标文件.docx"
+    # 保存文档
+    output_file = Path(md_file).parent / '完整投标文件.docx'
     doc.save(output_file)
     print(f"已生成 Word 文档：{output_file}")
-    
-    # 清理配置文件
-    if os.path.exists('config.json'):
-        os.unlink('config.json')
 
 if __name__ == "__main__":
-    convert_md_to_word() 
+    import sys
+    if len(sys.argv) > 1:
+        convert_md_to_word(sys.argv[1])
+    else:
+        print("请传入md文件路径，例如：python md_to_word.py data/output/项目名/项目名_完整投标文件.md") 
